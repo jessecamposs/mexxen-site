@@ -147,7 +147,25 @@ function roll() {
       if (res.cls === 'mex') { mexCount++; maxThrows = throwCount; }
       if (res.numeric === 32) { maxThrows = throwCount; }
       if (res.numeric === 31) { maxThrows = throwCount; }
-      if (a === 1 && b === 1) { ridderIdx = currentPlayerIdx; }
+
+      if (a === b) {
+        if (a === 1) {
+          // Double 1: this player becomes the new ridder
+          ridderIdx = currentPlayerIdx;
+          document.getElementById('ridderEmoji').textContent = '🗡️';
+          document.getElementById('ridderTitle').textContent = players[currentPlayerIdx].name;
+          document.getElementById('ridderSub').textContent = `${players[currentPlayerIdx].name} is de nieuwe ridder!`;
+          document.getElementById('ridderOverlay').classList.add('open');
+        } else if (ridderIdx !== null) {
+          // Double 2–6: ridder must drink (sips = die value)
+          const sips = a;
+          const ridderName = players[ridderIdx].name;
+          document.getElementById('ridderEmoji').textContent = '🍺';
+          document.getElementById('ridderTitle').textContent = ridderName;
+          document.getElementById('ridderSub').textContent = `De ridder moet ${sips} slok${sips !== 1 ? 'ken' : ''} drinken!`;
+          document.getElementById('ridderOverlay').classList.add('open');
+        }
+      }
 
       players[currentPlayerIdx].lastScore = res.score;
       players[currentPlayerIdx].lastNumeric = res.numeric;
@@ -260,6 +278,10 @@ function closeLoserModal() {
     return;
   }
   startRound();
+}
+
+function closeRidderModal() {
+  document.getElementById('ridderOverlay').classList.remove('open');
 }
 
 function resetGame() {
