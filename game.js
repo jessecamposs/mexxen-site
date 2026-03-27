@@ -17,6 +17,7 @@ let ridderIdx = null;
 let firstPlayerInRound = -1;
 let roundMaxThrows = 3;
 let nextRoundStarterIdx = -1;
+let roundPlayerOrder = [];
 
 function addPlayerInput(name='') {
   const container = document.getElementById('playerInputs');
@@ -81,8 +82,10 @@ function startRound() {
   const ai = activeIndices();
   const startIdx = (nextRoundStarterIdx >= 0 && ai.includes(nextRoundStarterIdx)) ? nextRoundStarterIdx : ai[0];
   nextRoundStarterIdx = -1;
-  firstPlayerInRound = startIdx;
-  currentPlayerIdx = startIdx;
+  const startPos = ai.indexOf(startIdx);
+  roundPlayerOrder = [...ai.slice(startPos), ...ai.slice(0, startPos)];
+  firstPlayerInRound = roundPlayerOrder[0];
+  currentPlayerIdx = roundPlayerOrder[0];
   startTurn();
 }
 
@@ -152,9 +155,8 @@ function roll() {
       renderRoundLog();
       renderScoreboard();
 
-      const ai = activeIndices();
-      const pos = ai.indexOf(currentPlayerIdx);
-      const isLast = pos === ai.length - 1;
+      const pos = roundPlayerOrder.indexOf(currentPlayerIdx);
+      const isLast = pos === roundPlayerOrder.length - 1;
       const throwsDone = throwCount >= maxThrows;
 
       // First player's actual throw count sets the cap for everyone else
@@ -190,10 +192,9 @@ function roll() {
 
 function nextPlayer() {
   if (!hasRolled) return;
-  const ai = activeIndices();
-  const pos = ai.indexOf(currentPlayerIdx);
-  if (pos < ai.length - 1) {
-    currentPlayerIdx = ai[pos + 1];
+  const pos = roundPlayerOrder.indexOf(currentPlayerIdx);
+  if (pos < roundPlayerOrder.length - 1) {
+    currentPlayerIdx = roundPlayerOrder[pos + 1];
     startTurn();
   } else {
     endRound();
