@@ -3,6 +3,9 @@ const DOT_MAP = {
   4:[1,3,7,9], 5:[1,3,5,7,9], 6:[1,3,4,6,7,9]
 };
 
+// Feature flag — set to true to re-enable the lives/elimination system
+const FEATURE_LIVES = false;
+
 let startLives = 6;
 let startSips = 2;
 let players = [];
@@ -230,11 +233,13 @@ function endRound() {
   const penalty = 1 + mexCount;
   const sipsTotal = startSips + mexCount;
 
-  for (const loser of losers) {
-    const p = players.find(pl => pl.name === loser.name);
-    if (!p) continue;
-    p.lives = Math.max(0, p.lives - penalty);
-    if (p.lives === 0) p.eliminated = true;
+  if (FEATURE_LIVES) {
+    for (const loser of losers) {
+      const p = players.find(pl => pl.name === loser.name);
+      if (!p) continue;
+      p.lives = Math.max(0, p.lives - penalty);
+      if (p.lives === 0) p.eliminated = true;
+    }
   }
 
   // First surviving loser starts the next round
@@ -245,21 +250,25 @@ function endRound() {
 
   renderScoreboard();
 
-  const remaining = activePlayers();
-  if (remaining.length <= 1) {
-    const winner = remaining[0] || players.reduce((best, p) => (!best || p.lives > best.lives) ? p : best, null);
-    document.getElementById('winnerTitle').textContent = winner.name;
-    document.getElementById('winnerSub').textContent = `Winnaar na ${roundNum} rondes.\nProost!`;
-    document.getElementById('winnerOverlay').classList.add('open');
-    return;
+  if (FEATURE_LIVES) {
+    const remaining = activePlayers();
+    if (remaining.length <= 1) {
+      const winner = remaining[0] || players.reduce((best, p) => (!best || p.lives > best.lives) ? p : best, null);
+      document.getElementById('winnerTitle').textContent = winner.name;
+      document.getElementById('winnerSub').textContent = `Winnaar na ${roundNum} rondes.\nProost!`;
+      document.getElementById('winnerOverlay').classList.add('open');
+      return;
+    }
   }
 
   const loserNames = losers.map(l => l.name).join(' & ');
-  const eliminated = losers.filter(l => players.find(p => p.name === l.name)?.eliminated);
   let sub = `${sipsTotal} slok${sipsTotal !== 1 ? 'ken' : ''} drinken`;
   if (mexCount > 0) sub += ` (${mexCount}x Mex)`;
-  sub += `. ${penalty} leven${penalty !== 1 ? 's' : ''} kwijt.`;
-  if (eliminated.length > 0) sub += `\n\n${eliminated.map(e => e.name).join(' & ')} uit het spel!`;
+  if (FEATURE_LIVES) {
+    const eliminated = losers.filter(l => players.find(p => p.name === l.name)?.eliminated);
+    sub += `. ${penalty} leven${penalty !== 1 ? 's' : ''} kwijt.`;
+    if (eliminated.length > 0) sub += `\n\n${eliminated.map(e => e.name).join(' & ')} uit het spel!`;
+  }
 
   document.getElementById('loserTitle').textContent = loserNames;
   document.getElementById('loserSub').textContent = sub;
@@ -269,13 +278,15 @@ function endRound() {
 function closeLoserModal() {
   document.getElementById('loserOverlay').classList.remove('open');
   roundNum++;
-  const remaining = activePlayers();
-  if (remaining.length <= 1) {
-    const winner = remaining[0];
-    document.getElementById('winnerTitle').textContent = winner ? winner.name : '—';
-    document.getElementById('winnerSub').textContent = `Winnaar na ${roundNum-1} rondes.\nProost!`;
-    document.getElementById('winnerOverlay').classList.add('open');
-    return;
+  if (FEATURE_LIVES) {
+    const remaining = activePlayers();
+    if (remaining.length <= 1) {
+      const winner = remaining[0];
+      document.getElementById('winnerTitle').textContent = winner ? winner.name : '—';
+      document.getElementById('winnerSub').textContent = `Winnaar na ${roundNum-1} rondes.\nProost!`;
+      document.getElementById('winnerOverlay').classList.add('open');
+      return;
+    }
   }
   startRound();
 }
@@ -334,9 +345,9 @@ function renderScoreboard() {
   const sb = document.getElementById('scoreboard');
   sb.innerHTML = players.map((p, i) => {
     const isActive = i === currentPlayerIdx && !p.eliminated;
-    const pips = Array.from({length: startLives}, (_, j) =>
+    const pips = FEATURE_LIVES ? Array.from({length: startLives}, (_, j) =>
       `<div class="life-pip ${j >= p.lives ? 'gone' : ''}"></div>`
-    ).join('');
+    ).join('') : '';
     const sc = p.lastScore === 'MEX' ? 'mex' : (p.lastNumeric !== null && p.lastNumeric <= 32 && p.lastScore !== '—') ? 'low' : '';
     return `<div class="score-row ${isActive?'active-turn':''} ${p.eliminated?'eliminated':''}">
       <span class="sr-name">${p.name}${i === ridderIdx ? ' 🗡️' : ''}</span>
