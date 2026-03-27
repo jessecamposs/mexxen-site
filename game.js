@@ -16,6 +16,7 @@ let hasRolled = false;
 let ridderIdx = null;
 let firstPlayerInRound = -1;
 let roundMaxThrows = 3;
+let nextRoundStarterIdx = -1;
 
 function addPlayerInput(name='') {
   const container = document.getElementById('playerInputs');
@@ -77,15 +78,18 @@ function startRound() {
   roundLog = [];
   renderRoundLog();
   players.forEach(p => { p.lastScore = '—'; p.lastNumeric = null; });
-  firstPlayerInRound = activeIndices()[0];
-  currentPlayerIdx = activeIndices()[0];
+  const ai = activeIndices();
+  const startIdx = (nextRoundStarterIdx >= 0 && ai.includes(nextRoundStarterIdx)) ? nextRoundStarterIdx : ai[0];
+  nextRoundStarterIdx = -1;
+  firstPlayerInRound = startIdx;
+  currentPlayerIdx = startIdx;
   startTurn();
 }
 
 function startTurn() {
   throwCount = 0;
   hasRolled = false;
-  maxThrows = mexCount > 0 ? 1 : roundMaxThrows;
+  maxThrows = roundMaxThrows;
 
   const p = players[currentPlayerIdx];
   document.getElementById('bannerName').textContent = p.name;
@@ -137,20 +141,10 @@ function roll() {
       updateThrowDots();
       showScore(res);
 
-      if (res.cls === 'mex') { mexCount++; maxThrows = 1; }
-
-      if (res.numeric === 32) {
-        if (currentPlayerIdx === firstPlayerInRound) {
-          roundMaxThrows = throwCount;
-        }
-        maxThrows = throwCount; // 32 = vast: end turn immediately
-      }
-      if (res.numeric === 31) {
-        maxThrows = throwCount; // 31 = aanwijzen: end turn immediately
-      }
-      if (a === 1 && b === 1) {
-        ridderIdx = currentPlayerIdx; // 1+1 = ridder
-      }
+      if (res.cls === 'mex') { mexCount++; maxThrows = throwCount; }
+      if (res.numeric === 32) { maxThrows = throwCount; }
+      if (res.numeric === 31) { maxThrows = throwCount; }
+      if (a === 1 && b === 1) { ridderIdx = currentPlayerIdx; }
 
       players[currentPlayerIdx].lastScore = res.score;
       players[currentPlayerIdx].lastNumeric = res.numeric;
@@ -163,6 +157,11 @@ function roll() {
       const isLast = pos === ai.length - 1;
       const throwsDone = throwCount >= maxThrows;
 
+      // First player's actual throw count sets the cap for everyone else
+      if (throwsDone && currentPlayerIdx === firstPlayerInRound) {
+        roundMaxThrows = throwCount;
+      }
+
       if (throwsDone) {
         document.getElementById('rollBtn').disabled = true;
         document.getElementById('rollBtn').style.background = '#222';
@@ -172,7 +171,7 @@ function roll() {
         const nb = document.getElementById('nextBtn');
         nb.textContent = 'Aanwijzen → Opnieuw';
         nb.classList.add('visible');
-        nb.onclick = startRound;
+        nb.onclick = () => { nextRoundStarterIdx = firstPlayerInRound; startRound(); };
       } else if (isLast && throwsDone) {
         const nb = document.getElementById('nextBtn');
         nb.textContent = 'Ronde afsluiten →';
@@ -217,6 +216,12 @@ function endRound() {
     p.lives = Math.max(0, p.lives - penalty);
     if (p.lives === 0) p.eliminated = true;
   }
+
+  // First surviving loser starts the next round
+  const firstSurvivorLoser = losers.find(l => !players.find(p => p.name === l.name)?.eliminated);
+  nextRoundStarterIdx = firstSurvivorLoser
+    ? players.findIndex(p => p.name === firstSurvivorLoser.name)
+    : -1;
 
   renderScoreboard();
 
