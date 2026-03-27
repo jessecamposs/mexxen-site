@@ -158,7 +158,8 @@ function roll() {
       const throwsDone = throwCount >= maxThrows;
 
       // First player's actual throw count sets the cap for everyone else
-      if (throwsDone && currentPlayerIdx === firstPlayerInRound) {
+      // (31 doesn't count — the player's turn resets)
+      if (throwsDone && currentPlayerIdx === firstPlayerInRound && res.numeric !== 31) {
         roundMaxThrows = throwCount;
       }
 
@@ -169,9 +170,9 @@ function roll() {
 
       if (res.numeric === 31) {
         const nb = document.getElementById('nextBtn');
-        nb.textContent = 'Aanwijzen → Opnieuw';
+        nb.textContent = 'Gooi opnieuw →';
         nb.classList.add('visible');
-        nb.onclick = () => { nextRoundStarterIdx = firstPlayerInRound; startRound(); };
+        nb.onclick = startTurn;
       } else if (isLast && throwsDone) {
         const nb = document.getElementById('nextBtn');
         nb.textContent = 'Ronde afsluiten →';
